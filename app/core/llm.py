@@ -1,6 +1,6 @@
 from functools import lru_cache
 from langchain_ollama import OllamaEmbeddings
-from langchain_community.chat_models import ChatOpenAI
+from langchain_openai import ChatOpenAI
 from app.core.config import get_settings
 
 

@@ -16,10 +16,15 @@ class VectorStore:
             persist_directory=s.chroma_path,
         )
 
-    def add_chunks(self, chunks: list[Document]) -> int:
-        self._store.add_documents(chunks)
-        logger.info("Added chunks to vector store", extra={"count": len(chunks)})
-        return len(chunks)
+    def add_chunks(self, chunks: list[Document], batch_size: int = 100) -> int:
+        """Add chunks in batches to avoid overwhelming the embedding model."""
+        total = 0
+        for i in range(0, len(chunks), batch_size):
+            batch = chunks[i : i + batch_size]
+            self._store.add_documents(batch)
+            total += len(batch)
+        logger.info("Added chunks to vector store", extra={"count": total})
+        return total
 
     def similarity_search(self, query: str, k: int = 5) -> list[Document]:
         return self._store.similarity_search(query, k=k)

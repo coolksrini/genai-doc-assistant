@@ -36,4 +36,6 @@ def response_node(state: AgentState) -> AgentState:
 
     trace.append(f"Response: Generated answer (grounded={is_grounded})")
     logger.info("Response node executed", extra={"is_grounded": is_grounded, "answer_len": len(answer)})
-    return {**state, "answer": answer, "is_grounded": is_grounded, "agent_trace": trace}
+    # Clear sources when not grounded — no sources should be cited for a refusal
+    sources = state.get("sources", []) if is_grounded else []
+    return {**state, "answer": answer, "is_grounded": is_grounded, "sources": sources, "agent_trace": trace}

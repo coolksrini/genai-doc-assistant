@@ -3,6 +3,9 @@ import logging
 import sys
 from datetime import datetime, timezone
 
+# Standard LogRecord fields to exclude from the extra payload
+_LOG_RECORD_FIELDS = frozenset(logging.LogRecord("", 0, "", 0, "", (), None).__dict__)
+
 
 class JsonFormatter(logging.Formatter):
     def format(self, record: logging.LogRecord) -> str:
@@ -14,8 +17,11 @@ class JsonFormatter(logging.Formatter):
         }
         if record.exc_info:
             log["exception"] = self.formatException(record.exc_info)
-        if hasattr(record, "extra"):
-            log.update(record.extra)
+        # Extra fields added via logger.info(..., extra={...}) land directly
+        # on record.__dict__ — pull them out by excluding standard fields
+        for key, value in record.__dict__.items():
+            if key not in _LOG_RECORD_FIELDS and not key.startswith("_"):
+                log[key] = value
         return json.dumps(log)
 
 
