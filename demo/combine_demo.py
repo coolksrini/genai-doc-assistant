@@ -2,135 +2,190 @@
 Combine the Playwright browser recording with Edge TTS narration into a
 final narrated demo video.
 
-Pipeline:
-  demo/assets/demo_raw.webm   (browser video, no audio)
-  demo/assets/XX_scene.mp3    (narration clips, one per scene)
-       ↓
-  demo/assets/demo_final.mp4  (narrated, H.264, ready to share)
+Strategy:
+  1. Concatenate all narration clips sequentially (0.8s gap between each).
+     No overlap possible — each clip starts strictly after the previous ends.
+  2. Slow the browser video to match the total audio duration using setpts.
+     Screen recordings look fine at 1.5–2× slowdown.
+  3. Apply EBU R128 loudnorm for consistent, broadcast-level volume.
+  4. Merge video + audio → demo_final.mp4
 
-Scenes are mapped to timestamps — edit SCENE_TIMINGS to match your recording.
-Run:
-  python demo/narration.py    ← generate audio clips first
-  python demo/playwright_demo.py  ← record browser video first
-  python demo/combine_demo.py ← then produce final video
+Run order:
+  python demo/narration.py        ← generate audio clips first
+  python demo/playwright_demo.py  ← record browser video
+  python demo/combine_demo.py     ← produce final video
 
 Requirements: ffmpeg in PATH
 """
-import subprocess
 import json
+import subprocess
+import tempfile
 from pathlib import Path
 
-ASSETS = Path(__file__).parent / "assets"
-RAW_VIDEO = ASSETS / "demo_raw.webm"
+ASSETS      = Path(__file__).parent / "assets"
+RAW_VIDEO   = ASSETS / "demo_raw.webm"
 FINAL_VIDEO = ASSETS / "demo_final.mp4"
 
-# Map each narration clip to the timestamp (seconds) where it starts in the video.
-# Adjust these times to match your actual recording — use VLC or ffprobe to check.
-SCENE_TIMINGS = [
-    # (start_sec, narration_file)
-    # Timings calibrated to Playwright demo pacing (PAUSE values in playwright_demo.py)
-    # Adjust these if your recording runs faster/slower — use VLC to check timestamps
-    (0,    "00_intro.mp3"),      # 0s  — app loading, health banner
-    (8,    "01_architecture.mp3"), # 8s  — app fully loaded, explain pipeline
-    (20,   "02_health.mp3"),     # 20s — zoom on health banner
-    (32,   "03_upload_pdf.mp3"), # 32s — uploading Attention paper
-    (52,   "04_upload_csv.mp3"), # 52s — uploading Titanic CSV
-    (65,   "05_upload_excel.mp3"), # 65s — uploading Happiness Excel
-    (80,   "06_grounded_question.mp3"), # 80s — asking about Transformer
-    (118,  "07_refusal.mp3"),    # 118s — Champions League refusal
-    (142,  "08_happiness.mp3"),  # 142s — Finland happiness question
-    (160,  "09_safety.mp3"),     # 160s — injection attempt blocked
-    (177,  "10_api_docs.mp3"),   # 177s — FastAPI Swagger docs
-    (202,  "11_outro.mp3"),      # 202s — back to Streamlit, closing remarks
+GAP_BETWEEN_CLIPS = 0.8   # seconds of silence between narration clips
+VOLUME_TARGET_LUFS = -14   # EBU R128 target (YouTube/streaming standard)
+
+# Ordered narration clips (edit text in narration.py, not here)
+CLIPS = [
+    "00_intro.mp3",
+    "01_architecture.mp3",
+    "02_health.mp3",
+    "03_upload_pdf.mp3",
+    "04_upload_csv.mp3",
+    "05_upload_excel.mp3",
+    "06_grounded_question.mp3",
+    "07_refusal.mp3",
+    "08_happiness.mp3",
+    "09_safety.mp3",
+    "10_api_docs.mp3",
+    "11_outro.mp3",
 ]
 
 
 def get_duration(path: Path) -> float:
-    """Get duration of a media file using ffprobe."""
     result = subprocess.run(
-        ["ffprobe", "-v", "quiet", "-print_format", "json",
-         "-show_format", str(path)],
-        capture_output=True, text=True
+        ["ffprobe", "-v", "quiet", "-print_format", "json", "-show_format", str(path)],
+        capture_output=True, text=True, check=True,
     )
-    info = json.loads(result.stdout)
-    return float(info["format"]["duration"])
+    return float(json.loads(result.stdout)["format"]["duration"])
 
 
-def build_audio_track(total_duration: float) -> Path:
+def build_silence(duration: float, path: Path):
+    """Generate a silent audio clip of `duration` seconds."""
+    subprocess.run([
+        "ffmpeg", "-y", "-f", "lavfi",
+        "-i", f"anullsrc=r=44100:cl=mono",
+        "-t", str(duration),
+        "-q:a", "9", str(path),
+    ], capture_output=True, check=True)
+
+
+def concatenate_audio(clips: list[Path]) -> tuple[Path, float]:
     """
-    Build a single audio track by placing each narration clip at its timestamp.
-    Uses ffmpeg's amix + adelay filters.
+    Concatenate clips with GAP_BETWEEN_CLIPS silence between each.
+    Returns (path_to_mixed.mp3, total_duration_seconds).
     """
-    print("Building audio track…")
-    inputs = []
-    filter_parts = []
+    print("Building audio track (sequential concatenation)…")
 
-    for i, (start_sec, clip_name) in enumerate(SCENE_TIMINGS):
-        clip_path = ASSETS / clip_name
-        if not clip_path.exists():
-            print(f"  ⚠️  Missing clip: {clip_name} — skipping")
-            continue
-        inputs += ["-i", str(clip_path)]
-        delay_ms = int(start_sec * 1000)
-        filter_parts.append(f"[{i + 1}:a]adelay={delay_ms}|{delay_ms}[a{i}]")
+    # Build alternating list: clip, gap, clip, gap, ... clip
+    silence_path = ASSETS / "_silence.mp3"
+    build_silence(GAP_BETWEEN_CLIPS, silence_path)
 
-    if not filter_parts:
-        print("No audio clips found — producing silent video")
-        return None
+    # Write ffmpeg concat file
+    concat_list = ASSETS / "_concat_list.txt"
+    with open(concat_list, "w") as f:
+        for i, clip in enumerate(clips):
+            f.write(f"file '{clip.resolve()}'\n")
+            if i < len(clips) - 1:
+                f.write(f"file '{silence_path.resolve()}'\n")
 
-    n = len(filter_parts)
-    mix_inputs = "".join(f"[a{i}]" for i in range(n))
-    filter_complex = ";".join(filter_parts) + f";{mix_inputs}amix=inputs={n}:duration=longest[aout]"
-
-    audio_path = ASSETS / "narration_mixed.mp3"
-    cmd = (
-        ["ffmpeg", "-y", "-i", str(RAW_VIDEO)]
-        + inputs
-        + ["-filter_complex", filter_complex,
-           "-map", "[aout]",
-           "-t", str(total_duration),
-           "-ar", "44100",
-           str(audio_path)]
-    )
-    subprocess.run(cmd, check=True, capture_output=True)
-    print(f"  ✓ Mixed audio: {audio_path.name}")
-    return audio_path
-
-
-def combine(audio_path: Path, total_duration: float):
-    """Merge video + audio into final MP4."""
-    print("Combining video + audio…")
-    cmd = [
+    mixed = ASSETS / "narration_sequential.mp3"
+    subprocess.run([
         "ffmpeg", "-y",
-        "-i", str(RAW_VIDEO),
+        "-f", "concat", "-safe", "0",
+        "-i", str(concat_list),
+        "-c", "copy",
+        str(mixed),
+    ], capture_output=True, check=True)
+
+    # Apply EBU R128 loudnorm (two-pass for accuracy)
+    normalized = ASSETS / "narration_normalized.mp3"
+    # Pass 1: measure
+    result = subprocess.run([
+        "ffmpeg", "-y", "-i", str(mixed),
+        "-af", f"loudnorm=I={VOLUME_TARGET_LUFS}:TP=-1.5:LRA=11:print_format=json",
+        "-f", "null", "-",
+    ], capture_output=True, text=True)
+    # Extract loudnorm JSON from stderr
+    stderr = result.stderr
+    start = stderr.rfind("{")
+    end = stderr.rfind("}") + 1
+    if start >= 0 and end > start:
+        ln = json.loads(stderr[start:end])
+        # Pass 2: apply with measured values
+        subprocess.run([
+            "ffmpeg", "-y", "-i", str(mixed),
+            "-af", (
+                f"loudnorm=I={VOLUME_TARGET_LUFS}:TP=-1.5:LRA=11"
+                f":measured_I={ln['input_i']}"
+                f":measured_TP={ln['input_tp']}"
+                f":measured_LRA={ln['input_lra']}"
+                f":measured_thresh={ln['input_thresh']}"
+                f":offset={ln['target_offset']}"
+                f":linear=true:print_format=none"
+            ),
+            "-ar", "44100", "-b:a", "192k",
+            str(normalized),
+        ], capture_output=True, check=True)
+        out_audio = normalized
+    else:
+        # Fallback: simple volume boost
+        subprocess.run([
+            "ffmpeg", "-y", "-i", str(mixed),
+            "-af", "volume=4dB",
+            "-ar", "44100", "-b:a", "192k",
+            str(normalized),
+        ], capture_output=True, check=True)
+        out_audio = normalized
+
+    audio_duration = get_duration(out_audio)
+
+    # Print per-clip timing table
+    cursor = 0.0
+    print(f"\n  {'Clip':<30} {'Start':>8}  {'Duration':>10}  {'End':>8}")
+    print(f"  {'-'*60}")
+    for clip in clips:
+        dur = get_duration(clip)
+        print(f"  {clip.name:<30} {cursor:>7.1f}s  {dur:>9.2f}s  {cursor+dur:>7.1f}s")
+        cursor += dur + GAP_BETWEEN_CLIPS
+    print(f"\n  Total audio duration: {audio_duration:.1f}s ({audio_duration/60:.1f} min)")
+
+    # Cleanup temp files
+    for tmp in [silence_path, concat_list, mixed]:
+        tmp.unlink(missing_ok=True)
+
+    return out_audio, audio_duration
+
+
+def slow_video_to_match(audio_duration: float) -> Path:
+    """
+    Slow down the raw video so its duration matches the audio.
+    Uses setpts for video and atempo for audio (though audio will be replaced).
+    """
+    video_duration = get_duration(RAW_VIDEO)
+    slowdown = audio_duration / video_duration
+    print(f"\n  Video: {video_duration:.1f}s → slowed {slowdown:.2f}× → {audio_duration:.1f}s")
+
+    slowed = ASSETS / "video_slowed.mp4"
+    subprocess.run([
+        "ffmpeg", "-y", "-i", str(RAW_VIDEO),
+        "-vf", f"setpts={slowdown:.4f}*PTS",
+        "-an",                          # drop original audio (there is none)
+        "-c:v", "libx264", "-crf", "22", "-preset", "fast",
+        str(slowed),
+    ], capture_output=True, check=True)
+    return slowed
+
+
+def combine(video_path: Path, audio_path: Path):
+    """Merge slowed video + normalised audio → final MP4."""
+    print("\nCombining video + audio…")
+    subprocess.run([
+        "ffmpeg", "-y",
+        "-i", str(video_path),
         "-i", str(audio_path),
-        "-c:v", "libx264",
-        "-crf", "23",
-        "-preset", "fast",
-        "-c:a", "aac",
-        "-b:a", "128k",
-        "-t", str(total_duration),
+        "-c:v", "copy",
+        "-c:a", "aac", "-b:a", "192k",
+        "-shortest",
         "-movflags", "+faststart",
         str(FINAL_VIDEO),
-    ]
-    subprocess.run(cmd, check=True, capture_output=True)
+    ], capture_output=True, check=True)
     size_mb = FINAL_VIDEO.stat().st_size / (1024 * 1024)
-    print(f"  ✓ Final video: {FINAL_VIDEO.name} ({size_mb:.1f} MB)")
-
-
-def make_silent_mp4():
-    """Convert webm to mp4 without audio (fallback)."""
-    print("Converting to MP4 (silent)…")
-    cmd = [
-        "ffmpeg", "-y",
-        "-i", str(RAW_VIDEO),
-        "-c:v", "libx264", "-crf", "23", "-preset", "fast",
-        "-movflags", "+faststart",
-        str(FINAL_VIDEO),
-    ]
-    subprocess.run(cmd, check=True, capture_output=True)
-    size_mb = FINAL_VIDEO.stat().st_size / (1024 * 1024)
-    print(f"  ✓ Silent MP4: {FINAL_VIDEO.name} ({size_mb:.1f} MB)")
+    print(f"  ✓ {FINAL_VIDEO.name} ({size_mb:.1f} MB)")
 
 
 if __name__ == "__main__":
@@ -139,22 +194,22 @@ if __name__ == "__main__":
         print("   Run: python demo/playwright_demo.py first")
         raise SystemExit(1)
 
-    total_duration = get_duration(RAW_VIDEO)
-    print(f"Video duration: {total_duration:.1f}s ({total_duration/60:.1f} min)\n")
+    clips = [ASSETS / c for c in CLIPS if (ASSETS / c).exists()]
+    missing = [c for c in CLIPS if not (ASSETS / c).exists()]
+    if missing:
+        print(f"⚠️  Missing clips (skipped): {missing}")
+    if not clips:
+        print("No clips found — run: python demo/narration.py first")
+        raise SystemExit(1)
 
-    clips_present = [ASSETS / clip for _, clip in SCENE_TIMINGS
-                     if (ASSETS / clip).exists()]
+    print(f"Found {len(clips)}/{len(CLIPS)} narration clips\n")
 
-    if clips_present:
-        audio_path = build_audio_track(total_duration)
-        if audio_path:
-            combine(audio_path, total_duration)
-        else:
-            make_silent_mp4()
-    else:
-        print("No narration clips found — generating silent MP4")
-        print("Run: python demo/narration.py first to generate audio")
-        make_silent_mp4()
+    audio_path, audio_duration = concatenate_audio(clips)
+    slowed_video  = slow_video_to_match(audio_duration)
+    combine(slowed_video, audio_path)
 
-    print(f"\n✅ Done: {FINAL_VIDEO}")
-    print("   Share this file or upload to YouTube/Loom for your capstone submission.")
+    # Cleanup temp video
+    slowed_video.unlink(missing_ok=True)
+
+    print(f"\n✅ Done → {FINAL_VIDEO}")
+    print("   Upload to YouTube / Loom, or attach to your capstone submission.")
