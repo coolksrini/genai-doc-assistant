@@ -15,12 +15,12 @@
 
 **Purpose**: Project scaffold, environment, and tooling
 
-- [ ] T001 Create full folder structure per plan.md (`app/api/`, `app/agents/`, `app/services/`, `app/core/`, `app/utils/`, `data/`, `tests/unit/`, `tests/integration/`, `ui/`)
-- [ ] T002 Create `requirements.txt` with all dependencies (langchain, langchain-community, langchain-ollama, langgraph, chromadb, fastapi, uvicorn, streamlit, pypdf2, pandas, openpyxl, pyyaml, python-multipart, pytest, httpx, pydantic-settings)
-- [ ] T003 Create `.env.example` with all env vars (LLM_BASE_URL, LLM_API_KEY, LLM_MODEL, EMBED_MODEL, CHROMA_PATH, MAX_FILE_SIZE_MB, CHUNK_SIZE, CHUNK_OVERLAP)
-- [ ] T004 Create `.gitignore` (data/, .env, __pycache__, .venv, *.pyc, chroma_db/)
-- [ ] T005 Create `tests/fixtures/` with one sample file per supported format (sample.pdf, sample.txt, sample.csv, sample.xlsx, sample.json, sample.yaml)
-- [ ] T006 [P] Create all `__init__.py` files for app/, app/api/, app/agents/, app/services/, app/core/, app/utils/, tests/, tests/unit/, tests/integration/
+- [x] T001 Create full folder structure per plan.md (`app/api/`, `app/agents/`, `app/services/`, `app/core/`, `app/utils/`, `data/`, `tests/unit/`, `tests/integration/`, `ui/`)
+- [x] T002 Create `requirements.txt` with all dependencies (langchain, langchain-community, langchain-ollama, langgraph, chromadb, fastapi, uvicorn, streamlit, pypdf2, pandas, openpyxl, pyyaml, python-multipart, pytest, httpx, pydantic-settings)
+- [x] T003 Create `.env.example` with all env vars (LLM_BASE_URL, LLM_API_KEY, LLM_MODEL, EMBED_MODEL, CHROMA_PATH, MAX_FILE_SIZE_MB, CHUNK_SIZE, CHUNK_OVERLAP)
+- [x] T004 Create `.gitignore` (data/, .env, __pycache__, .venv, *.pyc, chroma_db/)
+- [x] T005 Create `tests/fixtures/` with one sample file per supported format (sample.pdf, sample.txt, sample.csv, sample.xlsx, sample.json, sample.yaml)
+- [x] T006 [P] Create all `__init__.py` files for app/, app/api/, app/agents/, app/services/, app/core/, app/utils/, tests/, tests/unit/, tests/integration/
 
 **Checkpoint**: `pip install -r requirements.txt` succeeds; folder structure matches plan.md
 
@@ -30,11 +30,11 @@
 
 **Purpose**: Core infrastructure all user stories depend on. MUST complete before any story work.
 
-- [ ] T007 Implement `app/core/config.py` — pydantic `Settings` class loading all env vars with defaults; singleton `get_settings()` function
-- [ ] T008 Implement `app/core/llm.py` — `get_llm()` factory returning `ChatOpenAI` pointed at `LLM_BASE_URL`; `get_embeddings()` factory returning `OllamaEmbeddings` with `EMBED_MODEL`
-- [ ] T009 Implement `app/utils/logging.py` — structured JSON logger; `get_logger(name)` function; JSON format with timestamp, level, message, extra fields
-- [ ] T010 Implement `app/services/embedding.py` — `VectorStore` class wrapping `Chroma`; `add_chunks(chunks, metadata)`, `similarity_search(query, k)`, `collection_empty()` methods; reads `CHROMA_PATH` from config
-- [ ] T011 Create `main.py` — FastAPI app instance with CORS middleware, JSON error handlers, and router mounting; `uvicorn` entrypoint
+- [x] T007 Implement `app/core/config.py` — pydantic `Settings` class loading all env vars with defaults; singleton `get_settings()` function
+- [x] T008 Implement `app/core/llm.py` — `get_llm()` factory returning `ChatOpenAI` pointed at `LLM_BASE_URL`; `get_embeddings()` factory returning `OllamaEmbeddings` with `EMBED_MODEL`
+- [x] T009 Implement `app/utils/logging.py` — structured JSON logger; `get_logger(name)` function; JSON format with timestamp, level, message, extra fields
+- [x] T010 Implement `app/services/embedding.py` — `VectorStore` class wrapping `Chroma`; `add_chunks(chunks, metadata)`, `similarity_search(query, k)`, `collection_empty()` methods; reads `CHROMA_PATH` from config
+- [x] T011 Create `main.py` — FastAPI app instance with CORS middleware, JSON error handlers, and router mounting; `uvicorn` entrypoint
 
 **Checkpoint**: `python main.py` starts without errors; `GET /health` not yet implemented but app loads cleanly
 
@@ -48,18 +48,18 @@
 
 ### Implementation
 
-- [ ] T012 [US1] Implement `app/services/ingestion.py` — `load_document(file_path, format)` dispatch function; PDF loader using `pypdf2` returning list of `LangChain Document` objects
-- [ ] T013 [US1] Implement `app/services/chunking.py` — `chunk_documents(docs)` using `RecursiveCharacterTextSplitter(chunk_size=CHUNK_SIZE, chunk_overlap=CHUNK_OVERLAP)`; attaches source metadata to each chunk
-- [ ] T014 [US1] Implement `app/agents/planner.py` — `planner_node(state: AgentState)` that parses the question and appends `"Planner: ..."` to `state["agent_trace"]`; returns updated state
-- [ ] T015 [US1] Implement `app/agents/retriever.py` — `retriever_node(state: AgentState)` that embeds `state["question"]`, calls `VectorStore.similarity_search()`, populates `state["chunks"]` and `state["sources"]`
-- [ ] T016 [US1] Implement `app/agents/reasoning.py` — `reasoning_node(state: AgentState)` that formats retrieved chunks into a context string stored in `state["context"]`; adds trace entry
-- [ ] T017 [US1] Implement `app/agents/response.py` — `response_node(state: AgentState)` that calls LLM with grounded prompt (answer ONLY from context); sets `state["answer"]` and `state["is_grounded"]`; refusal message if no chunks
-- [ ] T018 [US1] Implement `app/agents/graph.py` — `AgentState` TypedDict; `build_graph()` returning compiled `StateGraph` with nodes: planner → retriever → reasoning → response; edges sequential
-- [ ] T019 [US1] Implement `app/api/routes.py` — `POST /upload-document`: validate file type/size, save to `data/`, call ingestion + chunking + embedding, return document metadata; `GET /health`: return `{"status":"ok","version":"1.0.0"}`
-- [ ] T020 [US1] Add `POST /ask-questions` to `app/api/routes.py` — validate non-empty question, check collection not empty, invoke agent graph, return Answer response model
-- [ ] T021 [US1] Write `tests/unit/test_ingestion.py` — test PDF loader returns non-empty Document list; test chunking produces chunks with metadata
-- [ ] T022 [US1] Write `tests/unit/test_agents.py` — test each agent node in isolation with mocked AgentState; assert state fields populated correctly
-- [ ] T023 [US1] Write `tests/integration/test_api.py` — test `/health` 200; test upload valid PDF 200; test ask grounded question returns is_grounded=true; test empty question returns 400
+- [x] T012 [US1] Implement `app/services/ingestion.py` — `load_document(file_path, format)` dispatch function; PDF loader using `pypdf2` returning list of `LangChain Document` objects
+- [x] T013 [US1] Implement `app/services/chunking.py` — `chunk_documents(docs)` using `RecursiveCharacterTextSplitter(chunk_size=CHUNK_SIZE, chunk_overlap=CHUNK_OVERLAP)`; attaches source metadata to each chunk
+- [x] T014 [US1] Implement `app/agents/planner.py` — `planner_node(state: AgentState)` that parses the question and appends `"Planner: ..."` to `state["agent_trace"]`; returns updated state
+- [x] T015 [US1] Implement `app/agents/retriever.py` — `retriever_node(state: AgentState)` that embeds `state["question"]`, calls `VectorStore.similarity_search()`, populates `state["chunks"]` and `state["sources"]`
+- [x] T016 [US1] Implement `app/agents/reasoning.py` — `reasoning_node(state: AgentState)` that formats retrieved chunks into a context string stored in `state["context"]`; adds trace entry
+- [x] T017 [US1] Implement `app/agents/response.py` — `response_node(state: AgentState)` that calls LLM with grounded prompt (answer ONLY from context); sets `state["answer"]` and `state["is_grounded"]`; refusal message if no chunks
+- [x] T018 [US1] Implement `app/agents/graph.py` — `AgentState` TypedDict; `build_graph()` returning compiled `StateGraph` with nodes: planner → retriever → reasoning → response; edges sequential
+- [x] T019 [US1] Implement `app/api/routes.py` — `POST /upload-document`: validate file type/size, save to `data/`, call ingestion + chunking + embedding, return document metadata; `GET /health`: return `{"status":"ok","version":"1.0.0"}`
+- [x] T020 [US1] Add `POST /ask-questions` to `app/api/routes.py` — validate non-empty question, check collection not empty, invoke agent graph, return Answer response model
+- [x] T021 [US1] Write `tests/unit/test_ingestion.py` — test PDF loader returns non-empty Document list; test chunking produces chunks with metadata
+- [x] T022 [US1] Write `tests/unit/test_agents.py` — test each agent node in isolation with mocked AgentState; assert state fields populated correctly
+- [x] T023 [US1] Write `tests/integration/test_api.py` — test `/health` 200; test upload valid PDF 200; test ask grounded question returns is_grounded=true; test empty question returns 400
 
 **Checkpoint**: All Scenario 1–4 from quickstart.md pass with `sample.pdf`
 

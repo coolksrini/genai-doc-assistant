@@ -85,9 +85,32 @@ CHUNK_OVERLAP=20
 
 > Each completed task adds an entry here with key learnings.
 
-### Foundation (Task 1) — 2026-06-08
+### Foundation + MVP (Phases 1–3, T001–T023) — 2026-06-08
 - Project scaffolded via `specify init` + Claude Code integration
 - Constitution written: 5 core principles established
 - Ollama running with llama3.2 (2.0GB) + nomic-embed-text (274MB)
 - Key decision: LangChain over LlamaIndex — better agent/graph support for
   multi-agent orchestration; larger community for troubleshooting
+
+**Implementation learnings (compound for next sessions):**
+- `filename` is a reserved key in Python `logging.LogRecord` — use `doc_name` instead
+- `langchain.schema.Document` is deprecated — use `langchain_core.documents.Document`
+- `langchain_community.vectorstores.Chroma` deprecated — use `langchain_chroma.Chroma`
+  (requires `pip install langchain-chroma`)
+- `langchain.schema.HumanMessage` → `langchain_core.messages.HumanMessage`
+- Homebrew `ollama` formula (0.30.6) missing llama-server binary — must install
+  `--cask ollama` (Ollama.app) for actual model inference to work
+- TypedDict does NOT support `**kwargs` unpacking — test helpers must construct
+  the full dict explicitly
+- `pytest tmp_path` fixture is the right way to create temp files for format tests
+- All 17 unit + integration tests pass with Ollama.app running
+
+**Files created (MVP):**
+- app/core/config.py, app/core/llm.py
+- app/utils/logging.py
+- app/services/ingestion.py, chunking.py, embedding.py
+- app/agents/graph.py, planner.py, retriever.py, reasoning.py, response.py
+- app/api/routes.py, main.py
+- tests/unit/test_ingestion.py, test_agents.py
+- tests/integration/test_api.py
+- tests/fixtures/ (sample.pdf, .txt, .csv, .xlsx, .json, .yaml)
