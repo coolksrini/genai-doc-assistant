@@ -112,14 +112,14 @@ with col_upload:
 with col_qa:
     st.subheader("💬 Ask a Question")
 
-    with st.form("qa_form", clear_on_submit=False):
-        question = st.text_area(
-            "Your question",
-            placeholder="e.g. What is the main topic of the document?",
-            height=100,
-        )
-        top_k = st.slider("Chunks to retrieve", min_value=1, max_value=20, value=5)
-        submitted = st.form_submit_button("Ask", use_container_width=True, type="primary")
+    question = st.text_area(
+        "Your question",
+        placeholder="e.g. What is the main topic of the document?",
+        height=100,
+        key="question_input",
+    )
+    top_k = st.slider("Chunks to retrieve", min_value=1, max_value=20, value=5, key="top_k")
+    submitted = st.button("Ask", use_container_width=True, type="primary", key="ask_btn")
 
     if submitted:
         if not question.strip():
