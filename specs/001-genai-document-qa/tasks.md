@@ -110,9 +110,9 @@
 
 ### Implementation
 
-- [ ] T035 [US4] Integrate JSON logger from `app/utils/logging.py` into all routes in `app/api/routes.py` — log every request (method, path, status) and every error (exception type, message, stack omitted from response)
-- [ ] T036 [US4] Add FastAPI exception handlers in `main.py` — `RequestValidationError` → 422 JSON; `HTTPException` → pass-through; unhandled `Exception` → 500 JSON with safe message; never expose stack trace in response
-- [ ] T037 [US4] Add Ollama connectivity check to `GET /health` — attempt `llm.invoke("ping")`; return `{"status":"degraded","llm":"unavailable"}` if it fails; still HTTP 200
+- [x] T035 [US4] Integrate JSON logger from `app/utils/logging.py` into all routes in `app/api/routes.py` — log every request (method, path, status) and every error (exception type, message, stack omitted from response)
+- [x] T036 [US4] Add FastAPI exception handlers in `main.py` — `RequestValidationError` → 422 JSON; `HTTPException` → pass-through; unhandled `Exception` → 500 JSON with safe message; never expose stack trace in response
+- [x] T037 [US4] Add Ollama connectivity check to `GET /health` — attempt `llm.invoke("ping")`; return `{"status":"degraded","llm":"unavailable"}` if it fails; still HTTP 200
 
 **Checkpoint**: Scenario 1 and Scenario 6 (error returns JSON not stack trace) from quickstart.md pass
 

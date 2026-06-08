@@ -85,6 +85,15 @@ CHUNK_OVERLAP=20
 
 > Each completed task adds an entry here with key learnings.
 
+### Phase 6 — Observability (T035–T037) — 2026-06-08
+- `log_requests` middleware in `main.py`: logs method, path, status, elapsed_ms per request
+- Exception handlers: `RequestValidationError` → 422, `HTTPException` → pass-through,
+  unhandled `Exception` → 500 safe message; never expose exc type or traceback to client
+- `/health` enriched: probes LLM (`invoke("ping")`) and vector store; returns
+  `{"status":"ok|degraded","llm":"available|unavailable","vector_store":"ready|empty|unavailable"}`
+- HTTP 200 is always returned from `/health` — `status` field is the real signal (operator pattern)
+- `HealthResponse` Pydantic model added to routes.py for schema enforcement
+
 ### Phase 5 — Agent Hardening (T031–T034) — 2026-06-08
 - `verifier_node` added to `app/agents/response.py`: second LLM pass (YES/NO)
   asking "Is this answer supported by the context?" — overrides to refusal if NO

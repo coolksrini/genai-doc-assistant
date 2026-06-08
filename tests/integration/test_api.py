@@ -16,8 +16,17 @@ def test_health_returns_ok(isolated_client):
     r = isolated_client.get("/health")
     assert r.status_code == 200
     body = r.json()
-    assert body["status"] == "ok"
+    assert body["status"] in {"ok", "degraded"}   # either is valid; always 200
     assert "version" in body
+    assert "llm" in body
+    assert "vector_store" in body
+
+
+@pytest.mark.integration
+def test_health_always_200_even_degraded(isolated_client):
+    """HTTP 200 is the contract — status field carries the real signal."""
+    r = isolated_client.get("/health")
+    assert r.status_code == 200
 
 
 # ---------- Upload validation ----------

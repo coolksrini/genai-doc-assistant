@@ -5,6 +5,7 @@ from fastapi import APIRouter, HTTPException, UploadFile, File
 from pydantic import BaseModel
 
 from app.core.config import get_settings
+from app.core.llm import get_llm
 from app.services.ingestion import load_document, SUPPORTED_FORMATS
 from app.services.chunking import chunk_documents
 from app.services.embedding import get_vector_store
@@ -17,8 +18,17 @@ router = APIRouter()
 DATA_DIR = Path("data/uploads")
 DATA_DIR.mkdir(parents=True, exist_ok=True)
 
+VERSION = "1.0.0"
+
 
 # ---------- Response models ----------
+
+class HealthResponse(BaseModel):
+    status: str          # "ok" | "degraded"
+    version: str
+    llm: str             # "available" | "unavailable"
+    vector_store: str    # "ready" | "empty" | "unavailable"
+
 
 class UploadResponse(BaseModel):
     document_id: str
@@ -42,9 +52,31 @@ class AnswerResponse(BaseModel):
 
 # ---------- Routes ----------
 
-@router.get("/health")
+@router.get("/health", response_model=HealthResponse)
 def health():
-    return {"status": "ok", "version": "1.0.0"}
+    """Liveness + readiness probe. Always returns HTTP 200; status field signals degradation."""
+    s = get_settings()
+
+    # LLM probe
+    llm_status = "available"
+    try:
+        get_llm().invoke("ping")
+    except Exception as exc:
+        logger.warning("LLM health check failed", extra={"error": str(exc)})
+        llm_status = "unavailable"
+
+    # Vector store probe
+    vs_status = "unavailable"
+    try:
+        store = get_vector_store()
+        vs_status = "empty" if store.collection_empty() else "ready"
+    except Exception as exc:
+        logger.warning("Vector store health check failed", extra={"error": str(exc)})
+
+    overall = "ok" if llm_status == "available" and vs_status != "unavailable" else "degraded"
+
+    logger.info("Health check", extra={"status": overall, "llm": llm_status, "vector_store": vs_status})
+    return HealthResponse(status=overall, version=VERSION, llm=llm_status, vector_store=vs_status)
 
 
 @router.post("/upload-document", response_model=UploadResponse)
