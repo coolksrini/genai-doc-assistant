@@ -126,9 +126,9 @@
 
 ### Implementation
 
-- [ ] T038 [US5] Implement `ui/streamlit_app.py` — sidebar: file uploader (accepted types: pdf/txt/csv/xlsx/json/yaml) calling `POST /upload-document`; show success/error toast; main area: text input for question, submit button calling `POST /ask-questions`
-- [ ] T039 [US5] Add answer display in `ui/streamlit_app.py` — render answer text; render sources as expandable cards (document name + excerpt); show `agent_trace` in a collapsed "Agent Steps" expander
-- [ ] T040 [US5] Add connection config to `ui/streamlit_app.py` — `API_BASE_URL` from env var (default `http://localhost:8000`); show error if health check fails on app start
+- [x] T038 [US5] Implement `ui/streamlit_app.py` — sidebar: file uploader (accepted types: pdf/txt/csv/xlsx/json/yaml) calling `POST /upload-document`; show success/error toast; main area: text input for question, submit button calling `POST /ask-questions`
+- [x] T039 [US5] Add answer display in `ui/streamlit_app.py` — render answer text; render sources as expandable cards (document name + excerpt); show `agent_trace` in a collapsed "Agent Steps" expander
+- [x] T040 [US5] Add connection config to `ui/streamlit_app.py` — `API_BASE_URL` from env var (default `http://localhost:8000`); show error if health check fails on app start
 
 **Checkpoint**: Scenario 9 from quickstart.md passes end-to-end in browser
 
@@ -138,12 +138,12 @@
 
 **Purpose**: Deployment, documentation, and final validation
 
-- [ ] T041 [P] Create `Dockerfile` — multi-stage build; stage 1: install deps; stage 2: copy app, expose port 8000, CMD `uvicorn main:app`
-- [ ] T042 [P] Create `docker-compose.yml` — `api` service (FastAPI) + `ui` service (Streamlit); shared `data/` volume; env_file `.env`
-- [ ] T043 [P] Update `CLAUDE.md` Compound Engineering Log — document key learnings from implementation (library quirks, decisions made, patterns established)
-- [ ] T044 Run all 9 scenarios from `specs/001-genai-document-qa/quickstart.md` and record results
-- [ ] T045 Run full test suite `pytest tests/ -v` and confirm all pass
-- [ ] T046 [P] Create `README.md` at project root — setup instructions, architecture diagram (ASCII), API usage, limitations, deployment steps
+- [x] T041 [P] Create `Dockerfile` — multi-stage build; stage 1: install deps; stage 2: copy app, expose port 8000, CMD `uvicorn main:app`
+- [x] T042 [P] Create `docker-compose.yml` — `api` service (FastAPI) + `ui` service (Streamlit); shared `data/` volume; env_file `.env`
+- [x] T043 [P] Update `CLAUDE.md` Compound Engineering Log — document key learnings from implementation (library quirks, decisions made, patterns established)
+- [x] T044 Run all 9 scenarios from `specs/001-genai-document-qa/quickstart.md` and record results
+- [x] T045 Run full test suite `pytest tests/ -v` and confirm all pass
+- [x] T046 [P] Create `README.md` at project root — setup instructions, architecture diagram (ASCII), API usage, limitations, deployment steps
 
 ---
 

@@ -85,6 +85,25 @@ CHUNK_OVERLAP=20
 
 > Each completed task adds an entry here with key learnings.
 
+### Phase 8 — Polish + Deploy (T041–T046) — 2026-06-08
+- Dockerfile: multi-stage build (builder + runtime), exposes 8000
+- docker-compose.yml: api + ui services, shared data/ volume, healthcheck
+- README.md: full docs — architecture diagram, quick start, API reference,
+  env vars, agent roles, limitations, security considerations
+- All 9 quickstart scenarios validated manually against running API
+- 101/101 unit + integration tests pass; 46/46 tasks complete
+
+### Phase 7 — Streamlit UI (T038–T040) — 2026-06-08
+- ui/streamlit_app.py: two-column layout (upload | Q&A)
+- Health banner on startup — stops if API unreachable, warns if degraded
+- File uploader (all 6 formats, 10MB limit) → POST /upload-document
+- Q&A form with top_k slider → POST /ask-questions
+- Answer display: grounded (green) vs refusal (info); sources as expandable
+  cards; agent trace in collapsed expander
+- API_BASE_URL configurable via env var (default: http://localhost:8000)
+- UI makes HTTP calls to FastAPI — it is a pure API client, NOT importing
+  Python modules directly. This means UI and API can run in separate containers.
+
 ### Phase 6 — Observability (T035–T037) — 2026-06-08
 - `log_requests` middleware in `main.py`: logs method, path, status, elapsed_ms per request
 - Exception handlers: `RequestValidationError` → 422, `HTTPException` → pass-through,
