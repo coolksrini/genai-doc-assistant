@@ -16,6 +16,13 @@ st.set_page_config(
     layout="wide",
 )
 
+# Ensure content never bleeds past viewport edge at smaller window sizes
+st.markdown("""
+<style>
+  section.main > div { max-width: 100%; padding-right: 2rem; }
+</style>
+""", unsafe_allow_html=True)
+
 
 # ---------- helpers ----------
 
@@ -78,7 +85,7 @@ else:
 st.title("🤖 GenAI Document Assistant")
 st.caption("Upload enterprise documents and ask questions — answers grounded in your documents only.")
 
-col_upload, col_qa = st.columns([1, 2], gap="large")
+col_upload, col_qa = st.columns([1, 2], gap="medium")
 
 
 # ---------- sidebar / upload ----------
@@ -89,7 +96,9 @@ with col_upload:
         "Choose a file",
         type=ACCEPTED_TYPES,
         help=f"Supported: {', '.join(ACCEPTED_TYPES)}. Max 10 MB.",
+        label_visibility="collapsed",
     )
+    st.caption(f"Accepted: {', '.join(ACCEPTED_TYPES).upper()} · Max 10 MB")
 
     if uploaded:
         with st.spinner(f"Ingesting {uploaded.name}…"):

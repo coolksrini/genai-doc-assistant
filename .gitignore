@@ -28,3 +28,5 @@ Thumbs.db
 .pytest_cache/
 .coverage
 htmlcov/
+demo/assets/
+!demo/assets/.gitkeep
