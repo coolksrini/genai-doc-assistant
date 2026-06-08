@@ -18,18 +18,25 @@ def build_graph():
     from app.agents.planner import planner_node
     from app.agents.retriever import retriever_node
     from app.agents.reasoning import reasoning_node
-    from app.agents.response import response_node
+    from app.agents.response import response_node, verifier_node
 
     graph = StateGraph(AgentState)
     graph.add_node("planner", planner_node)
     graph.add_node("retriever", retriever_node)
     graph.add_node("reasoning", reasoning_node)
     graph.add_node("response", response_node)
+    graph.add_node("verifier", verifier_node)
 
     graph.set_entry_point("planner")
     graph.add_edge("planner", "retriever")
     graph.add_edge("retriever", "reasoning")
     graph.add_edge("reasoning", "response")
-    graph.add_edge("response", END)
+    # Conditional: only run verifier when response claims to be grounded
+    graph.add_conditional_edges(
+        "response",
+        lambda s: "verify" if s.get("is_grounded") else "end",
+        {"verify": "verifier", "end": END},
+    )
+    graph.add_edge("verifier", END)
 
     return graph.compile()

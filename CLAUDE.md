@@ -85,6 +85,19 @@ CHUNK_OVERLAP=20
 
 > Each completed task adds an entry here with key learnings.
 
+### Phase 5 — Agent Hardening (T031–T034) — 2026-06-08
+- `verifier_node` added to `app/agents/response.py`: second LLM pass (YES/NO)
+  asking "Is this answer supported by the context?" — overrides to refusal if NO
+- Graph updated: conditional edge after `response` → runs `verifier` only when
+  `is_grounded=True`; refusals skip verifier entirely
+- Planner guardrails extended to 15 injection patterns (pretend/act-as/reveal/override)
+- Key pattern: `verifier_node` caps context at 2000 chars to stay within token budget
+- Verifier verdict starts with "NO" check (not exact match) to handle model verbosity
+
+### Phase 4 — Multi-Format (T024–T030) — 2026-06-08
+- All 6 loaders (PDF/TXT/CSV/Excel/JSON/YAML) were implemented in Phase 3 together
+- Marked complete after verifying 31 format-specific tests pass
+
 ### Foundation + MVP (Phases 1–3, T001–T023) — 2026-06-08
 - Project scaffolded via `specify init` + Claude Code integration
 - Constitution written: 5 core principles established

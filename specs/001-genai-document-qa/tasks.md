@@ -73,13 +73,13 @@
 
 ### Implementation
 
-- [ ] T024 [P] [US2] Add TXT loader to `app/services/ingestion.py` — read plain text file via `pathlib`; wrap in `LangChain Document`
-- [ ] T025 [P] [US2] Add CSV loader to `app/services/ingestion.py` — `pandas.read_csv()`; convert each row to a Document with row index metadata
-- [ ] T026 [P] [US2] Add Excel loader to `app/services/ingestion.py` — `pandas.read_excel()` with `openpyxl` engine; same row-to-Document conversion
-- [ ] T027 [P] [US2] Add JSON loader to `app/services/ingestion.py` — stdlib `json.load()`; flatten nested structure to text; wrap in Document
-- [ ] T028 [P] [US2] Add YAML loader to `app/services/ingestion.py` — `pyyaml.safe_load()`; convert to text representation; wrap in Document
-- [ ] T029 [US2] Update file-type validation in `app/api/routes.py` to whitelist: `.pdf`, `.txt`, `.csv`, `.xlsx`, `.json`, `.yaml`
-- [ ] T030 [US2] Write `tests/unit/test_ingestion.py` additions — one test per new format; assert non-empty Document list returned
+- [x] T024 [P] [US2] Add TXT loader to `app/services/ingestion.py` — read plain text file via `pathlib`; wrap in `LangChain Document`
+- [x] T025 [P] [US2] Add CSV loader to `app/services/ingestion.py` — `pandas.read_csv()`; convert each row to a Document with row index metadata
+- [x] T026 [P] [US2] Add Excel loader to `app/services/ingestion.py` — `pandas.read_excel()` with `openpyxl` engine; same row-to-Document conversion
+- [x] T027 [P] [US2] Add JSON loader to `app/services/ingestion.py` — stdlib `json.load()`; flatten nested structure to text; wrap in Document
+- [x] T028 [P] [US2] Add YAML loader to `app/services/ingestion.py` — `pyyaml.safe_load()`; convert to text representation; wrap in Document
+- [x] T029 [US2] Update file-type validation in `app/api/routes.py` to whitelist: `.pdf`, `.txt`, `.csv`, `.xlsx`, `.json`, `.yaml`
+- [x] T030 [US2] Write `tests/unit/test_ingestion.py` additions — one test per new format; assert non-empty Document list returned
 
 **Checkpoint**: Scenario 8 from quickstart.md passes (all 6 formats upload successfully)
 
@@ -93,10 +93,10 @@
 
 ### Implementation
 
-- [ ] T031 [US3] Add output verifier node `app/agents/response.py` — after LLM response, check if answer references document content; if similarity score below threshold, override with refusal; update `is_grounded`
-- [ ] T032 [US3] Add guardrail check to `app/agents/planner.py` — detect off-topic or unsafe prompts (empty after strip, injection patterns); raise `ValueError` caught at route level
-- [ ] T033 [US3] Update `app/agents/graph.py` — add conditional edge after response node: if `is_grounded=False` short-circuit; ensure all 4 agent traces logged in `agent_trace`
-- [ ] T034 [US3] Write `tests/unit/test_agents.py` additions — test guardrail rejects off-topic prompt; test verifier sets `is_grounded=False` when no relevant chunks
+- [x] T031 [US3] Add output verifier node `app/agents/response.py` — after LLM response, check if answer references document content; if similarity score below threshold, override with refusal; update `is_grounded`
+- [x] T032 [US3] Add guardrail check to `app/agents/planner.py` — detect off-topic or unsafe prompts (empty after strip, injection patterns); raise `ValueError` caught at route level
+- [x] T033 [US3] Update `app/agents/graph.py` — add conditional edge after response node: if `is_grounded=False` short-circuit; ensure all 4 agent traces logged in `agent_trace`
+- [x] T034 [US3] Write `tests/unit/test_agents.py` additions — test guardrail rejects off-topic prompt; test verifier sets `is_grounded=False` when no relevant chunks
 
 **Checkpoint**: Scenario 3 (multi-agent trace visible in response) and Scenario 4 (refusal on out-of-scope) from quickstart.md pass
 
