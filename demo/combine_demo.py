@@ -32,26 +32,47 @@ VOLUME_TARGET_LUFS = -14   # EBU R128 target (YouTube/streaming standard)
 # Ordered narration clips (edit text in narration.py, not here)
 CLIPS = [
     "00_intro.mp3",
-    "01_architecture.mp3",
-    "02_health.mp3",
-    "03_upload_pdf.mp3",
-    "04_upload_csv.mp3",
-    "05_upload_excel.mp3",
-    "06_grounded_question.mp3",
-    "07_refusal.mp3",
-    "08_happiness.mp3",
-    "09_safety.mp3",
-    "10_api_docs.mp3",
-    "11_outro.mp3",
+    "01_upload_pdf.mp3",
+    "02_upload_csv.mp3",
+    "03_upload_excel.mp3",
+    "04_question.mp3",
+    "05_answer.mp3",
+    "06_sources.mp3",
+    "07_agent_trace.mp3",
+    "08_refusal.mp3",
+    "09_happiness.mp3",
+    "10_injection.mp3",
+    "11_api_docs.mp3",
+    "12_outro.mp3",
 ]
 
 
 def get_duration(path: Path) -> float:
-    result = subprocess.run(
+    """Get duration in seconds. Falls back to stream-level DURATION tag for webm."""
+    # Try format-level first
+    r = subprocess.run(
         ["ffprobe", "-v", "quiet", "-print_format", "json", "-show_format", str(path)],
         capture_output=True, text=True, check=True,
     )
-    return float(json.loads(result.stdout)["format"]["duration"])
+    fmt = json.loads(r.stdout).get("format", {})
+    if "duration" in fmt:
+        return float(fmt["duration"])
+
+    # Fallback: stream-level tags (common for webm/matroska)
+    r2 = subprocess.run(
+        ["ffprobe", "-v", "quiet", "-print_format", "json", "-show_streams", str(path)],
+        capture_output=True, text=True, check=True,
+    )
+    for stream in json.loads(r2.stdout).get("streams", []):
+        dur = stream.get("duration")
+        if dur and dur != "N/A":
+            return float(dur)
+        tag_dur = stream.get("tags", {}).get("DURATION", "")
+        if tag_dur:
+            # Format: HH:MM:SS.nnnnnnnnn
+            parts = tag_dur.split(":")
+            return float(parts[0]) * 3600 + float(parts[1]) * 60 + float(parts[2])
+    raise ValueError(f"Could not determine duration of {path}")
 
 
 def build_silence(duration: float, path: Path):

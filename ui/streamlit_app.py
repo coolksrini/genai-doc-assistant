@@ -7,7 +7,6 @@ import requests
 import streamlit as st
 
 API_BASE_URL = os.getenv("API_BASE_URL", "http://localhost:8000").rstrip("/")
-
 ACCEPTED_TYPES = ["pdf", "txt", "csv", "xlsx", "json", "yaml"]
 
 st.set_page_config(
@@ -16,7 +15,6 @@ st.set_page_config(
     layout="wide",
 )
 
-# Ensure content never bleeds past viewport edge at smaller window sizes
 st.markdown("""
 <style>
   section.main > div { max-width: 100%; padding-right: 2rem; }
@@ -28,13 +26,12 @@ st.markdown("""
 
 def check_health() -> dict | None:
     try:
-        r = requests.get(f"{API_BASE_URL}/health", timeout=5)
-        return r.json()
+        return requests.get(f"{API_BASE_URL}/health", timeout=5).json()
     except Exception:
         return None
 
 
-def upload_document(file) -> dict | None:
+def upload_document(file):
     try:
         r = requests.post(
             f"{API_BASE_URL}/upload-document",
@@ -46,7 +43,7 @@ def upload_document(file) -> dict | None:
         return {"detail": str(exc)}, 500
 
 
-def ask_question(question: str, top_k: int) -> dict | None:
+def ask_question(question: str, top_k: int):
     try:
         r = requests.post(
             f"{API_BASE_URL}/ask-questions",
@@ -77,98 +74,204 @@ if health.get("status") == "degraded":
         msgs.append("Vector store is unavailable")
     st.warning("System degraded: " + "; ".join(msgs), icon="⚠️")
 else:
-    st.success(f"API connected — v{health.get('version', '?')} | LLM: {health.get('llm')} | Store: {health.get('vector_store')}", icon="✅")
+    st.success(
+        f"API connected — v{health.get('version', '?')} "
+        f"| LLM: {health.get('llm')} "
+        f"| Store: {health.get('vector_store')}",
+        icon="✅",
+    )
 
-
-# ---------- layout ----------
+# ---------- title ----------
 
 st.title("🤖 GenAI Document Assistant")
 st.caption("Upload enterprise documents and ask questions — answers grounded in your documents only.")
 
-col_upload, col_qa = st.columns([1, 2], gap="medium")
+# ---------- tabs ----------
 
+tab_app, tab_help = st.tabs(["💬 App", "ℹ️ About & Architecture"])
 
-# ---------- sidebar / upload ----------
+# ===== ABOUT TAB =====
+with tab_help:
+    st.markdown("""
+## About
 
-with col_upload:
-    st.subheader("📁 Upload Documents")
-    uploaded = st.file_uploader(
-        "Choose a file",
-        type=ACCEPTED_TYPES,
-        help=f"Supported: {', '.join(ACCEPTED_TYPES)}. Max 10 MB.",
-        label_visibility="collapsed",
-    )
-    st.caption(f"Accepted: {', '.join(ACCEPTED_TYPES).upper()} · Max 10 MB")
+The **GenAI Document Assistant** is an AI-powered document Q&A system built for the
+Edureka PGP GenAI & ML Capstone. Upload enterprise documents in any format and ask
+natural language questions — answers are grounded exclusively in the uploaded documents.
+No hallucination. No guessing.
 
-    if uploaded:
-        with st.spinner(f"Ingesting {uploaded.name}…"):
-            result, status = upload_document(uploaded)
+---
 
-        if status == 200:
-            st.success(
-                f"✅ **{result['filename']}** ingested — {result['chunk_count']} chunks",
-                icon="📄",
-            )
-        else:
-            st.error(f"Upload failed: {result.get('detail', 'unknown error')}", icon="❌")
+## System Architecture
 
-    st.divider()
-    st.caption("**Tip:** Upload multiple documents before asking questions. The system searches across all of them.")
+```
+┌──────────────────────────────────────────────────────────────┐
+│                        USER LAYER                            │
+│   Streamlit UI (port 8501)    ◄──►   curl / API client       │
+└───────────────────────────┬──────────────────────────────────┘
+                            │ HTTP
+┌───────────────────────────▼──────────────────────────────────┐
+│               FastAPI REST API (port 8000)                   │
+│  GET /health  ·  POST /upload-document  ·  POST /ask-questions│
+│  Request logging middleware  ·  Exception handlers           │
+└──────────┬─────────────────────────────┬─────────────────────┘
+           │                             │
+  ┌────────▼────────┐         ┌──────────▼──────────────────┐
+  │ INGESTION LAYER │         │   5-AGENT PIPELINE           │
+  │                 │         │   (LangGraph StateGraph)     │
+  │ PDF  → pypdf2   │         │                              │
+  │ TXT  → pathlib  │         │  Planner ──► Retriever       │
+  │ CSV  → pandas   │         │     ↓              ↓         │
+  │ Excel→ openpyxl │         │  Reasoning      ChromaDB     │
+  │ JSON → stdlib   │         │     ↓                        │
+  │ YAML → pyyaml   │         │  Response                    │
+  │                 │         │     ↓ (if grounded)          │
+  │ Chunk: 200 tok  │         │  Verifier                    │
+  │ Overlap: 20 tok │         └──────────┬───────────────────┘
+  └────────┬────────┘                    │
+           │ embed                       │ embed query
+  ┌────────▼─────────────────────────────▼──────────────────┐
+  │              ChromaDB  (local vector store)             │
+  └──────────────────────────┬──────────────────────────────┘
+                             │
+  ┌──────────────────────────▼──────────────────────────────┐
+  │                  Ollama (local LLM)                     │
+  │  llama3.2         — answer generation + verification    │
+  │  nomic-embed-text — text → 768-dim vector               │
+  └─────────────────────────────────────────────────────────┘
+```
 
+---
 
-# ---------- Q&A ----------
+## Agent Roles
 
-with col_qa:
-    st.subheader("💬 Ask a Question")
+| Agent | What it does |
+|---|---|
+| **Planner** | Validates question; detects 15 prompt injection patterns |
+| **Retriever** | Embeds question → cosine similarity → top-K chunks |
+| **Reasoning** | Formats chunks into a labelled context string |
+| **Response** | Calls LLM with strict grounding prompt; refuses if no context |
+| **Verifier** | Second LLM call: confirms answer is supported (YES/NO) |
 
-    question = st.text_area(
-        "Your question",
-        placeholder="e.g. What is the main topic of the document?",
-        height=100,
-        key="question_input",
-    )
-    top_k = st.slider("Chunks to retrieve", min_value=1, max_value=20, value=5, key="top_k")
-    submitted = st.button("Ask", use_container_width=True, type="primary", key="ask_btn")
+---
 
-    if submitted:
-        if not question.strip():
-            st.warning("Please enter a question.", icon="⚠️")
-        else:
-            with st.spinner("Thinking…"):
-                result, status = ask_question(question.strip(), top_k)
+## Supported Formats
 
+| Format | Parser |
+|---|---|
+| PDF | pypdf2 |
+| TXT | stdlib pathlib |
+| CSV | pandas read_csv |
+| Excel (.xlsx) | pandas + openpyxl |
+| JSON | stdlib json |
+| YAML | pyyaml |
+
+---
+
+## Configuration
+
+| Variable | Default | Description |
+|---|---|---|
+| `LLM_BASE_URL` | `http://localhost:11434/v1` | Ollama — swap to OpenAI/Groq |
+| `LLM_MODEL` | `llama3.2` | Chat model |
+| `EMBED_MODEL` | `nomic-embed-text` | Embedding model |
+| `CHUNK_SIZE` | `200` | Tokens per chunk |
+| `MAX_FILE_SIZE_MB` | `10` | Upload limit |
+
+**Switch to cloud LLM** (zero code changes):
+```
+LLM_BASE_URL=https://api.groq.com/openai/v1
+LLM_API_KEY=gsk_...
+LLM_MODEL=llama-3.3-70b-versatile
+```
+
+---
+
+GitHub: [coolksrini/genai-doc-assistant](https://github.com/coolksrini/genai-doc-assistant)
+""")
+
+# ===== APP TAB =====
+with tab_app:
+    col_upload, col_qa = st.columns([1, 2], gap="medium")
+
+    with col_upload:
+        st.subheader("📁 Upload Documents")
+        uploaded = st.file_uploader(
+            "Choose a file",
+            type=ACCEPTED_TYPES,
+            help=f"Supported: {', '.join(ACCEPTED_TYPES)}. Max 10 MB.",
+            label_visibility="collapsed",
+        )
+        st.caption(f"Accepted: {', '.join(ACCEPTED_TYPES).upper()} · Max 10 MB")
+
+        if uploaded:
+            with st.spinner(f"Ingesting {uploaded.name}…"):
+                result, status = upload_document(uploaded)
             if status == 200:
-                is_grounded = result.get("is_grounded", False)
-
-                # Answer
-                if is_grounded:
-                    st.success("**Answer**")
-                    st.markdown(result["answer"])
-                else:
-                    st.info(result["answer"], icon="🔍")
-
-                # Sources
-                sources = result.get("sources", [])
-                if sources:
-                    with st.expander(f"📚 Sources ({len(sources)} chunk(s))", expanded=True):
-                        for i, src in enumerate(sources, 1):
-                            st.markdown(
-                                f"**{i}. {src['document_name']}** — chunk {src['chunk_index']}"
-                            )
-                            st.caption(src["excerpt"])
-                            if i < len(sources):
-                                st.divider()
-
-                # Agent trace
-                trace = result.get("agent_trace", [])
-                if trace:
-                    with st.expander("🔎 Agent Steps", expanded=False):
-                        for step in trace:
-                            st.text(step)
-
-            elif status == 400:
-                st.warning(result.get("detail", "Bad request"), icon="⚠️")
-            elif status == 503:
-                st.error(result.get("detail", "Service unavailable"), icon="🔴")
+                st.success(
+                    f"✅ **{result['filename']}** ingested — {result['chunk_count']} chunks",
+                    icon="📄",
+                )
             else:
-                st.error(f"Unexpected error ({status}): {result.get('detail')}", icon="❌")
+                st.error(f"Upload failed: {result.get('detail', 'unknown error')}", icon="❌")
+
+        st.divider()
+        st.caption("**Tip:** Upload multiple documents before asking questions. "
+                   "The system searches across all of them.")
+
+    with col_qa:
+        st.subheader("💬 Ask a Question")
+
+        question = st.text_area(
+            "Your question",
+            placeholder="e.g. What is the main topic of the document?",
+            height=100,
+            key="question_input",
+        )
+        top_k = st.slider(
+            "Chunks to retrieve", min_value=1, max_value=20, value=5, key="top_k"
+        )
+        submitted = st.button(
+            "Ask", use_container_width=True, type="primary", key="ask_btn"
+        )
+
+        if submitted:
+            if not question.strip():
+                st.warning("Please enter a question.", icon="⚠️")
+            else:
+                with st.spinner("Thinking…"):
+                    result, status = ask_question(question.strip(), top_k)
+
+                if status == 200:
+                    is_grounded = result.get("is_grounded", False)
+                    if is_grounded:
+                        st.success("**Answer**")
+                        st.markdown(result["answer"])
+                    else:
+                        st.info(result["answer"], icon="🔍")
+
+                    sources = result.get("sources", [])
+                    if sources:
+                        with st.expander(f"📚 Sources ({len(sources)} chunk(s))", expanded=True):
+                            for i, src in enumerate(sources, 1):
+                                st.markdown(
+                                    f"**{i}. {src['document_name']}** — chunk {src['chunk_index']}"
+                                )
+                                st.caption(src["excerpt"])
+                                if i < len(sources):
+                                    st.divider()
+
+                    trace = result.get("agent_trace", [])
+                    if trace:
+                        with st.expander("🔎 Agent Steps", expanded=False):
+                            for step in trace:
+                                st.text(step)
+
+                elif status == 400:
+                    st.warning(result.get("detail", "Bad request"), icon="⚠️")
+                elif status == 503:
+                    st.error(result.get("detail", "Service unavailable"), icon="🔴")
+                else:
+                    st.error(
+                        f"Unexpected error ({status}): {result.get('detail')}", icon="❌"
+                    )
