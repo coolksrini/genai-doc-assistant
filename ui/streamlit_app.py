@@ -127,7 +127,7 @@ No hallucination. No guessing.
   │ JSON → stdlib   │         │     ↓                        │
   │ YAML → pyyaml   │         │  Response                    │
   │                 │         │     ↓ (if grounded)          │
-  │ Chunk: 200 tok  │         │  Verifier                    │
+  │ Chunk: 500 tok  │         │  Verifier                    │
   │ Overlap: 20 tok │         └──────────┬───────────────────┘
   └────────┬────────┘                    │
            │ embed                       │ embed query
@@ -176,7 +176,7 @@ No hallucination. No guessing.
 | `LLM_BASE_URL` | `http://localhost:11434/v1` | Ollama — swap to OpenAI/Groq |
 | `LLM_MODEL` | `llama3.2` | Chat model |
 | `EMBED_MODEL` | `nomic-embed-text` | Embedding model |
-| `CHUNK_SIZE` | `200` | Tokens per chunk |
+| `CHUNK_SIZE` | `500` | Tokens per chunk |
 | `MAX_FILE_SIZE_MB` | `10` | Upload limit |
 
 **Switch to cloud LLM** (zero code changes):

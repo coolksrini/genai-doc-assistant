@@ -11,8 +11,8 @@ class Settings(BaseSettings):
     embed_model: str = "nomic-embed-text"
     chroma_path: str = "./data/chroma_db"
     max_file_size_mb: int = 10
-    chunk_size: int = 200
-    chunk_overlap: int = 20
+    chunk_size: int = 500
+    chunk_overlap: int = 50
 
 
 @lru_cache

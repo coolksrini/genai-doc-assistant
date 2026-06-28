@@ -7,8 +7,8 @@ def test_defaults():
     get_settings.cache_clear()
     s = get_settings()
     assert s.llm_model == "llama3.2"
-    assert s.chunk_size == 200
-    assert s.chunk_overlap == 20
+    assert s.chunk_size == 500
+    assert s.chunk_overlap == 50
     assert s.max_file_size_mb == 10
 
 

@@ -39,10 +39,10 @@ UPLOADS_PATH  = Path(__file__).parent.parent / "data" / "uploads"
 # Durations from: python demo/narration.py  (rate="-15%", en-US-AndrewNeural)
 SCENE = {
     "intro":         28,   # 00_intro.mp3        = 26.14s + 2s
-    "architecture":  79,   # 01_architecture.mp3 = 77.18s + 2s  (slow scroll)
-    "upload_pdf":    30,   # 02_upload_pdf.mp3   = 27.48s + 2s
+    "architecture":  79,   # 01_architecture.mp3 = 77.45s + 2s  (slow scroll)
+    "upload_pdf":    30,   # 02_upload_pdf.mp3   = 26.78s + 2s
     "upload_csv":    15,   # 03_upload_csv.mp3   = 13.27s + 2s
-    "upload_excel":  18,   # 04_upload_excel.mp3 = 16.01s + 2s
+    "upload_excel":  18,   # 04_upload_excel.mp3 = 15.94s + 2s
     "question":      34,   # 05_question.mp3     = 31.94s + 2s  (pipeline running)
     "answer":        26,   # 06_answer.mp3       = 24.12s + 2s
     "sources":       18,   # 07_sources.mp3      = 15.77s + 2s
@@ -94,11 +94,24 @@ async def click_tab(page, label: str):
     print(f"  ⚠️  Tab '{label}' not found")
 
 
-async def upload_file(page, filename: str):
+async def upload_file(page, filename: str, timeout_ms: int = 120000):
     path = SAMPLE_DOCS / filename
     print(f"  📁 Uploading {filename}…")
+    # Count existing ingestion success messages before upload
+    prior_count = await page.locator("text=ingested").count()
     await page.locator("input[type='file']").set_input_files(str(path))
-    await page.wait_for_timeout(4000)   # wait for Streamlit ingestion response
+    await page.wait_for_timeout(1000)  # let Streamlit start processing
+    # Wait until a new "ingested" message appears (upload + embedding complete)
+    start = 0
+    while start < timeout_ms:
+        cur = await page.locator("text=ingested").count()
+        if cur > prior_count:
+            break
+        await page.wait_for_timeout(1000)
+        start += 1000
+    if start >= timeout_ms:
+        print(f"  ⚠️  Timeout waiting for {filename} ingestion")
+    await page.wait_for_timeout(800)  # brief settle
 
 
 async def type_question(page, question: str):

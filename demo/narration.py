@@ -46,7 +46,7 @@ SCENES = [
         Requests hit the FastAPI backend on port eight thousand.
         When you upload a document, it passes through the ingestion layer —
         where format-specific parsers handle PDF, CSV, Excel, JSON, YAML, and plain text.
-        The text is split into two-hundred-token chunks with twenty-token overlap,
+        The text is split into five-hundred-token chunks with fifty-token overlap,
         then embedded and stored in ChromaDB.
         When you ask a question, the backend runs a five-agent pipeline using LangGraph:
         the Planner validates input and detects injection attempts,
@@ -66,7 +66,7 @@ SCENES = [
         The system reads each page, splits the text into chunks,
         embeds each chunk using the nomic-embed-text model,
         and stores the vectors in ChromaDB.
-        Two hundred and forty-seven searchable chunks, ingested in seconds.
+        Ninety-three searchable chunks, ingested in seconds.
     """),
 
     ("03_upload_csv.mp3", """
@@ -77,7 +77,7 @@ SCENES = [
 
     ("04_upload_excel.mp3", """
         And the World Happiness Report twenty twenty three as an Excel spreadsheet.
-        Forty-two rows covering the top-ranked countries,
+        Twenty-one rows covering the top-ranked countries,
         with scores for GDP, social support, life expectancy, freedom, and generosity.
     """),
 
