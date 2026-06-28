@@ -56,8 +56,12 @@ SCENE = {
     "outro":         35,   # 13_outro.mp3        = 33.43s + 1.6s
 }
 
-# Architecture scroll duration = narration 01_architecture.mp3 = 77.45s
-ARCH_SCROLL_DURATION = 77   # seconds — the scroll IS the arch narration timing
+# Architecture scroll: two phases so the right content is on screen when narrated.
+# Phase 1 (40s, 400px): slow scroll through the architecture diagram
+# Phase 2 (37s, 300px): slower scroll to settle on the Agent Roles table
+# Total raw: ~79s → compressed to 77.45s (01_architecture.mp3) at 1.02×
+ARCH_PH1_PX = 400;  ARCH_PH1_S = 40
+ARCH_PH2_PX = 300;  ARCH_PH2_S = 37
 
 
 # ---------- timing tracking ----------
@@ -191,7 +195,10 @@ async def run_demo():
         await page.wait_for_timeout(1000)
         await screenshot(page, "02_architecture_top")
         mark("arch")
-        await scroll_slowly(page, total_px=3000, duration_s=ARCH_SCROLL_DURATION)
+        # Phase 1: scroll through architecture diagram
+        await scroll_slowly(page, total_px=ARCH_PH1_PX, duration_s=ARCH_PH1_S)
+        # Phase 2: slower scroll to settle on Agent Roles table
+        await scroll_slowly(page, total_px=ARCH_PH2_PX, duration_s=ARCH_PH2_S)
         await screenshot(page, "02_architecture_agents")
         await page.wait_for_timeout(2000)
         mark("arch_end")   # mark here — BEFORE transition to App tab

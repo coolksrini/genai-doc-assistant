@@ -42,7 +42,7 @@ RAW_VIDEO   = ASSETS / "demo_raw.webm"
 TIMINGS     = ASSETS / "scene_timings.json"
 FINAL_VIDEO = ASSETS / "demo_final.mp4"
 
-GAP_BETWEEN_CLIPS = 0.8   # seconds of silence between narration clips
+GAP_BETWEEN_CLIPS = 0.0   # no gap — avoids cumulative audio/video drift and -shortest truncation
 
 # Ordered list: (mark_start, mark_end, narration_clip)
 # arch_end→csv intentionally includes the tab-switch + PDF upload transition
@@ -100,16 +100,19 @@ def build_silence(duration: float, path: Path):
 
 
 def concatenate_audio(clips: list[Path]) -> tuple[Path, float]:
-    """Concatenate narration clips with GAP_BETWEEN_CLIPS silence."""
+    """Concatenate narration clips with optional GAP_BETWEEN_CLIPS silence."""
     print("Building audio track…")
-    silence = ASSETS / "_silence.mp3"
-    build_silence(GAP_BETWEEN_CLIPS, silence)
+
+    silence: Path | None = None
+    if GAP_BETWEEN_CLIPS > 0:
+        silence = ASSETS / "_silence.mp3"
+        build_silence(GAP_BETWEEN_CLIPS, silence)
 
     concat_list = ASSETS / "_audio_concat.txt"
     with open(concat_list, "w") as f:
         for i, clip in enumerate(clips):
             f.write(f"file '{clip.resolve()}'\n")
-            if i < len(clips) - 1:
+            if i < len(clips) - 1 and silence is not None:
                 f.write(f"file '{silence.resolve()}'\n")
 
     out = ASSETS / "narration_normalized.mp3"
@@ -128,7 +131,7 @@ def concatenate_audio(clips: list[Path]) -> tuple[Path, float]:
         cursor += d + GAP_BETWEEN_CLIPS
     print(f"\n  Total audio: {duration:.1f}s ({duration/60:.1f} min)")
 
-    for tmp in [silence, concat_list]:
+    for tmp in [p for p in [silence, concat_list] if p is not None]:
         tmp.unlink(missing_ok=True)
     return out, duration
 
