@@ -32,18 +32,19 @@ VOLUME_TARGET_LUFS = -14   # EBU R128 target (YouTube/streaming standard)
 # Ordered narration clips (edit text in narration.py, not here)
 CLIPS = [
     "00_intro.mp3",
-    "01_upload_pdf.mp3",
-    "02_upload_csv.mp3",
-    "03_upload_excel.mp3",
-    "04_question.mp3",
-    "05_answer.mp3",
-    "06_sources.mp3",
-    "07_agent_trace.mp3",
-    "08_refusal.mp3",
-    "09_happiness.mp3",
-    "10_injection.mp3",
-    "11_api_docs.mp3",
-    "12_outro.mp3",
+    "01_architecture.mp3",
+    "02_upload_pdf.mp3",
+    "03_upload_csv.mp3",
+    "04_upload_excel.mp3",
+    "05_question.mp3",
+    "06_answer.mp3",
+    "07_sources.mp3",
+    "08_agent_trace.mp3",
+    "09_refusal.mp3",
+    "10_happiness.mp3",
+    "11_injection.mp3",
+    "12_api_docs.mp3",
+    "13_outro.mp3",
 ]
 
 
@@ -104,54 +105,18 @@ def concatenate_audio(clips: list[Path]) -> tuple[Path, float]:
             if i < len(clips) - 1:
                 f.write(f"file '{silence_path.resolve()}'\n")
 
-    mixed = ASSETS / "narration_sequential.mp3"
+    # Concatenate with explicit re-encode (avoids -c copy truncation bugs with mp3)
+    normalized = ASSETS / "narration_normalized.mp3"
     subprocess.run([
         "ffmpeg", "-y",
         "-f", "concat", "-safe", "0",
         "-i", str(concat_list),
-        "-c", "copy",
-        str(mixed),
+        "-af", "volume=5dB",   # boost: Edge TTS output tends to be quiet
+        "-ar", "44100",
+        "-b:a", "192k",
+        str(normalized),
     ], capture_output=True, check=True)
-
-    # Apply EBU R128 loudnorm (two-pass for accuracy)
-    normalized = ASSETS / "narration_normalized.mp3"
-    # Pass 1: measure
-    result = subprocess.run([
-        "ffmpeg", "-y", "-i", str(mixed),
-        "-af", f"loudnorm=I={VOLUME_TARGET_LUFS}:TP=-1.5:LRA=11:print_format=json",
-        "-f", "null", "-",
-    ], capture_output=True, text=True)
-    # Extract loudnorm JSON from stderr
-    stderr = result.stderr
-    start = stderr.rfind("{")
-    end = stderr.rfind("}") + 1
-    if start >= 0 and end > start:
-        ln = json.loads(stderr[start:end])
-        # Pass 2: apply with measured values
-        subprocess.run([
-            "ffmpeg", "-y", "-i", str(mixed),
-            "-af", (
-                f"loudnorm=I={VOLUME_TARGET_LUFS}:TP=-1.5:LRA=11"
-                f":measured_I={ln['input_i']}"
-                f":measured_TP={ln['input_tp']}"
-                f":measured_LRA={ln['input_lra']}"
-                f":measured_thresh={ln['input_thresh']}"
-                f":offset={ln['target_offset']}"
-                f":linear=true:print_format=none"
-            ),
-            "-ar", "44100", "-b:a", "192k",
-            str(normalized),
-        ], capture_output=True, check=True)
-        out_audio = normalized
-    else:
-        # Fallback: simple volume boost
-        subprocess.run([
-            "ffmpeg", "-y", "-i", str(mixed),
-            "-af", "volume=4dB",
-            "-ar", "44100", "-b:a", "192k",
-            str(normalized),
-        ], capture_output=True, check=True)
-        out_audio = normalized
+    out_audio = normalized
 
     audio_duration = get_duration(out_audio)
 
@@ -166,7 +131,7 @@ def concatenate_audio(clips: list[Path]) -> tuple[Path, float]:
     print(f"\n  Total audio duration: {audio_duration:.1f}s ({audio_duration/60:.1f} min)")
 
     # Cleanup temp files
-    for tmp in [silence_path, concat_list, mixed]:
+    for tmp in [silence_path, concat_list]:
         tmp.unlink(missing_ok=True)
 
     return out_audio, audio_duration

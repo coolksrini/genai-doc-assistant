@@ -65,6 +65,7 @@ if health is None:
         icon="🔴",
     )
     st.stop()
+    health = {}  # guard: st.stop() is a no-op outside a Streamlit session (e.g. AppTest bare import)
 
 if health.get("status") == "degraded":
     msgs = []

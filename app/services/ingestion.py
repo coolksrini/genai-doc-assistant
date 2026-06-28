@@ -54,11 +54,22 @@ def _load_txt(path: Path, filename: str) -> list[Document]:
     return [Document(page_content=text, metadata=_meta(filename))]
 
 
+def _row_to_text(row: "pd.Series") -> str:
+    """Convert a DataFrame row to YAML-like text the LLM reads easily.
+    e.g.  Country: Finland
+          Score: 7.804
+          Rank: 1
+    Much more LLM-friendly than Python dict repr.
+    """
+    lines = [f"{col}: {val}" for col, val in row.items() if pd.notna(val)]
+    return "\n".join(lines)
+
+
 def _load_csv(path: Path, filename: str) -> list[Document]:
     df = pd.read_csv(path)
     docs = []
     for i, row in df.iterrows():
-        docs.append(Document(page_content=str(row.to_dict()), metadata=_meta(filename, i)))
+        docs.append(Document(page_content=_row_to_text(row), metadata=_meta(filename, i)))
     return docs
 
 
@@ -66,7 +77,7 @@ def _load_excel(path: Path, filename: str) -> list[Document]:
     df = pd.read_excel(path, engine="openpyxl")
     docs = []
     for i, row in df.iterrows():
-        docs.append(Document(page_content=str(row.to_dict()), metadata=_meta(filename, i)))
+        docs.append(Document(page_content=_row_to_text(row), metadata=_meta(filename, i)))
     return docs
 
 
