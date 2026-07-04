@@ -18,7 +18,7 @@ natural language questions. Autonomous AI agents retrieve relevant context and
 generate grounded answers using RAG.
 
 **Capstone course**: Edureka PGP GenAI & ML — Batch B9
-**Submission deadline**: 30 June 2026
+**Submission deadline**: 31 July 2026
 **Submission**: zip file (code mandatory; docs + execution results good-to-have)
 
 ## Stack at a Glance

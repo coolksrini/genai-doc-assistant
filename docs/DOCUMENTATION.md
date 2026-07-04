@@ -88,7 +88,7 @@ The system was built following two methodologies:
   │ └── YAML        │      │     ↓                   │
   │                 │      │  Verifier               │
   │ Chunking        │      └──────────┬──────────────┘
-  │ (200 tok+20 ol) │                 │
+  │ (500 tok+50 ol) │                 │
   └────────┬────────┘                 │
            │ embed                    │ embed query
   ┌────────▼──────────────────────────▼──────────────┐
@@ -141,7 +141,7 @@ ingestion.py: PdfReader extracts text page by page
           │
           ▼
 chunking.py: RecursiveCharacterTextSplitter
-          │  chunk_size=200 tokens, chunk_overlap=20
+          │  chunk_size=500 tokens, chunk_overlap=50
           │  → 47 chunks, each with chunk_index in metadata
           │
           ▼
@@ -709,7 +709,7 @@ pytest tests/
 
 6. **Document text extractability**: PDF files must contain extractable text. Scanned PDFs (image-only) cannot be processed without OCR (not included in v1).
 
-7. **Chunk size sufficient for answers**: the 200-token chunk size is designed for typical enterprise document paragraphs. Very long, continuous answers may be split across chunks.
+7. **Chunk size sufficient for answers**: the 500-token chunk size with 50-token overlap is designed for typical enterprise document paragraphs. Very long, continuous answers may be split across chunks.
 
 ---
 
