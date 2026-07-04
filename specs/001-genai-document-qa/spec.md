@@ -58,8 +58,8 @@ for each, verify all return grounded answers.
 
 ### User Story 3 - Multi-Agent Reasoning Pipeline (Priority: P2)
 
-When a user submits a complex question, the system uses multiple AI agents
-(Planner, Retriever, Reasoning, Response) working in sequence to produce a
+When a user submits a complex question, the system uses five AI agents
+(Planner, Retriever, Reasoning, Response, Verifier) working in sequence to produce a
 high-quality, validated answer.
 
 **Why this priority**: The agentic pipeline is the technical centrepiece of the
@@ -141,13 +141,14 @@ receive an answer — all without touching the API directly.
   descriptive message.
 - **FR-003**: System MUST reject unsupported file types with an HTTP 415 error
   listing accepted formats.
-- **FR-004**: System MUST chunk uploaded documents into segments of ~200 tokens
-  with overlap, embed each chunk using a local embedding model, and store in a
-  vector database.
+- **FR-004**: System MUST chunk uploaded documents into segments of ~500 tokens
+  with 50-token overlap, embed each chunk using a local embedding model, and store
+  in a vector database.
 - **FR-005**: System MUST retrieve the top-N most semantically relevant chunks for
   any user question using cosine similarity search.
-- **FR-006**: System MUST pass retrieved chunks through a four-agent pipeline
-  (Planner → Retriever → Reasoning → Response) to produce the final answer.
+- **FR-006**: System MUST pass retrieved chunks through a five-agent pipeline
+  (Planner → Retriever → Reasoning → Response → Verifier) to produce the final
+  answer.
 - **FR-007**: System MUST instruct the LLM to answer ONLY from the retrieved
   context — responses not supported by the documents MUST be declined.
 - **FR-008**: System MUST include a source reference (document name + chunk
@@ -166,13 +167,13 @@ receive an answer — all without touching the API directly.
 
 - **Document**: Uploaded file with metadata (name, format, upload timestamp, chunk
   count). Source of all grounded answers.
-- **Chunk**: A ~200-token segment of a document with overlap, stored with embedding
-  vector and metadata (source document, position).
+- **Chunk**: A ~500-token segment of a document with 50-token overlap, stored with
+  embedding vector and metadata (source document, position).
 - **Question**: User-submitted natural language query with non-empty text.
 - **Answer**: LLM-generated response grounded in retrieved chunks, with source
   citations. May be a refusal if no relevant chunks found.
-- **Agent**: One of four specialized reasoning units (Planner, Retriever,
-  Reasoning, Response) in the processing pipeline.
+- **Agent**: One of five specialized reasoning units (Planner, Retriever,
+  Reasoning, Response, Verifier) in the processing pipeline.
 
 ## Success Criteria *(mandatory)*
 
@@ -188,7 +189,7 @@ receive an answer — all without touching the API directly.
   rejected at the API boundary with descriptive error messages in 100% of cases.
 - **SC-005**: The system starts from a clean state and produces a working Q&A
   session in under 5 minutes of setup time.
-- **SC-006**: All four agents (Planner, Retriever, Reasoning, Response) can be
+- **SC-006**: All five agents (Planner, Retriever, Reasoning, Response, Verifier) can be
   tested independently with mocked inputs.
 
 ## Assumptions
