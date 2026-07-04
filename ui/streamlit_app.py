@@ -34,7 +34,10 @@ def check_health() -> dict | None:
 def list_documents() -> list[dict]:
     try:
         r = requests.get(f"{API_BASE_URL}/list-documents", timeout=10)
-        return r.json() if r.status_code == 200 else []
+        if r.status_code == 200:
+            result = r.json()
+            return result if isinstance(result, list) else []
+        return []
     except Exception:
         return []
 
