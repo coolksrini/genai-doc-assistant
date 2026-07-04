@@ -1,8 +1,11 @@
 # GenAI Document Assistant — Capstone Documentation
 
 **Course**: Edureka PGP in Generative AI & ML (Batch B9)
+
 **Project**: Capstone Project ILT — AI Agent-Based Knowledge & Decision Support System
+
 **Submission Date**: July 2026
+
 **GitHub**: https://github.com/coolksrini/genai-doc-assistant
 
 ---
@@ -41,11 +44,13 @@ Enterprise knowledge is locked in documents — reports, spreadsheets, policies,
 
 ### Design Philosophy
 
-The system was built following two methodologies:
+The system was built with three guiding principles:
 
-1. **Spec-Driven Development (GitHub Spec Kit)**: formal specification → implementation plan → task breakdown → implementation. This ensures every feature traces back to a documented requirement.
+1. **Spec-first development**: formal requirements and user stories defined before any code was written, ensuring every feature traces back to a documented need.
 
-2. **Compound Engineering**: each unit of work is documented in `CLAUDE.md` so knowledge compounds — bugs discovered, library quirks, and architectural decisions become institutional memory that future development builds on.
+2. **Separation of concerns**: document parsing, chunking, embedding, and agent reasoning are isolated into distinct modules — each independently testable and replaceable without affecting the rest.
+
+3. **Local-first, cloud-ready**: all inference runs locally via Ollama (no API keys, no cost, full privacy). Switching to a cloud provider requires only two environment variable changes.
 
 ---
 
@@ -390,8 +395,8 @@ CHROMA_PATH=./data/chroma_db
 MAX_FILE_SIZE_MB=10
 
 # Chunking
-CHUNK_SIZE=200
-CHUNK_OVERLAP=20
+CHUNK_SIZE=500
+CHUNK_OVERLAP=50
 ```
 
 **Switching to a cloud LLM** (no code changes required):
@@ -553,7 +558,7 @@ The `docker-compose.yml` defines:
 
 ## 8. Testing Approach
 
-The project has four test layers covering 122 tests total:
+The project has four test layers covering 167 tests total:
 
 ### Test Layers
 
@@ -609,7 +614,7 @@ pytest tests/
 | **PDF tables** | Tables in PDFs are extracted as unstructured text. Complex tabular data (merged cells, multi-column layouts) may be misrepresented. |
 | **10 MB file limit** | Documents larger than 10 MB must be split. This can be raised via `MAX_FILE_SIZE_MB` but larger documents produce more chunks and slower embedding. |
 | **No document deletion** | There is no API endpoint to remove specific documents from the vector store. Clearing requires deleting the ChromaDB directory and re-ingesting. |
-| **Chunk boundary answers** | If an answer spans a chunk boundary, the system may miss it. The 20-token overlap mitigates this but does not eliminate it. |
+| **Chunk boundary answers** | If an answer spans a chunk boundary, the system may miss it. The 50-token overlap mitigates this but does not eliminate it. |
 
 ### Scope Limitations (v1 by design)
 
@@ -738,6 +743,3 @@ pytest tests/
 - **Fine-tuning**: fine-tune the embedding model on domain-specific terminology for specialised enterprise use cases
 
 ---
-
-*Documentation generated as part of the Edureka PGP GenAI & ML Capstone Project submission.*
-*Built using Compound Engineering methodology with GitHub Spec Kit and Claude Code.*

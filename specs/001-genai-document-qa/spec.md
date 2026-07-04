@@ -189,7 +189,7 @@ receive an answer — all without touching the API directly.
   rejected at the API boundary with descriptive error messages in 100% of cases.
 - **SC-005**: The system starts from a clean state and produces a working Q&A
   session in under 5 minutes of setup time.
-- **SC-006**: All four agents (Planner, Retriever, Reasoning, Response) can be
+- **SC-006**: All five agents (Planner, Retriever, Reasoning, Response, Verifier) can be
   tested independently with mocked inputs.
 
 ## Assumptions
