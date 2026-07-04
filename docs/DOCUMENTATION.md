@@ -2,7 +2,7 @@
 
 **Course**: Edureka PGP in Generative AI & ML (Batch B9)
 **Project**: Capstone Project ILT — AI Agent-Based Knowledge & Decision Support System
-**Submission Date**: June 2026
+**Submission Date**: July 2026
 **GitHub**: https://github.com/coolksrini/genai-doc-assistant
 
 ---
