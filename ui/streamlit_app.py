@@ -31,6 +31,14 @@ def check_health() -> dict | None:
         return None
 
 
+def list_documents() -> list[dict]:
+    try:
+        r = requests.get(f"{API_BASE_URL}/list-documents", timeout=10)
+        return r.json() if r.status_code == 200 else []
+    except Exception:
+        return []
+
+
 def upload_document(file):
     try:
         r = requests.post(
@@ -128,7 +136,7 @@ No hallucination. No guessing.
   │ YAML → pyyaml   │         │  Response                    │
   │                 │         │     ↓ (if grounded)          │
   │ Chunk: 500 tok  │         │  Verifier                    │
-  │ Overlap: 20 tok │         └──────────┬───────────────────┘
+  │ Overlap: 50 tok │         └──────────┬───────────────────┘
   └────────┬────────┘                    │
            │ embed                       │ embed query
   ┌────────▼─────────────────────────────▼──────────────────┐
@@ -177,6 +185,7 @@ No hallucination. No guessing.
 | `LLM_MODEL` | `llama3.2` | Chat model |
 | `EMBED_MODEL` | `nomic-embed-text` | Embedding model |
 | `CHUNK_SIZE` | `500` | Tokens per chunk |
+| `CHUNK_OVERLAP` | `50` | Overlap tokens between chunks |
 | `MAX_FILE_SIZE_MB` | `10` | Upload limit |
 
 **Switch to cloud LLM** (zero code changes):
@@ -193,9 +202,16 @@ GitHub: [coolksrini/genai-doc-assistant](https://github.com/coolksrini/genai-doc
 
 # ===== APP TAB =====
 with tab_app:
-    col_upload, col_qa = st.columns([1, 2], gap="medium")
+    tab_docs, tab_qa = st.tabs(["📁 Documents", "💬 Ask"])
 
-    with col_upload:
+    with tab_docs:
+        docs = list_documents()
+        if docs:
+            st.subheader(f"📚 Ingested Documents ({len(docs)})")
+            for doc in docs:
+                st.markdown(f"- **{doc['filename']}** — {doc['chunk_count']} chunks")
+            st.divider()
+
         st.subheader("📁 Upload Documents")
         uploaded = st.file_uploader(
             "Choose a file",
@@ -216,11 +232,10 @@ with tab_app:
             else:
                 st.error(f"Upload failed: {result.get('detail', 'unknown error')}", icon="❌")
 
-        st.divider()
         st.caption("**Tip:** Upload multiple documents before asking questions. "
                    "The system searches across all of them.")
 
-    with col_qa:
+    with tab_qa:
         st.subheader("💬 Ask a Question")
 
         question = st.text_area(
@@ -230,7 +245,7 @@ with tab_app:
             key="question_input",
         )
         top_k = st.slider(
-            "Chunks to retrieve", min_value=1, max_value=20, value=5, key="top_k"
+            "Top-K chunks to retrieve (1–20)", min_value=1, max_value=20, value=5, key="top_k"
         )
         submitted = st.button(
             "Ask", use_container_width=True, type="primary", key="ask_btn"

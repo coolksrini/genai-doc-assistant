@@ -32,6 +32,15 @@ class VectorStore:
     def collection_empty(self) -> bool:
         return self._store._collection.count() == 0
 
+    def list_documents(self) -> list[dict]:
+        """Return unique documents with their chunk counts."""
+        result = self._store._collection.get(include=["metadatas"])
+        counts: dict[str, int] = {}
+        for meta in result.get("metadatas", []):
+            name = meta.get("source", "unknown")
+            counts[name] = counts.get(name, 0) + 1
+        return [{"filename": name, "chunk_count": count} for name, count in sorted(counts.items())]
+
 
 _store: VectorStore | None = None
 

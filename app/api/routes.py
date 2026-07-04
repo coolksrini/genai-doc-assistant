@@ -42,6 +42,11 @@ class QuestionRequest(BaseModel):
     top_k: int = 5
 
 
+class DocumentInfo(BaseModel):
+    filename: str
+    chunk_count: int
+
+
 class AnswerResponse(BaseModel):
     question: str
     answer: str
@@ -77,6 +82,17 @@ def health():
 
     logger.info("Health check", extra={"status": overall, "llm": llm_status, "vector_store": vs_status})
     return HealthResponse(status=overall, version=VERSION, llm=llm_status, vector_store=vs_status)
+
+
+@router.get("/list-documents", response_model=list[DocumentInfo])
+def list_documents():
+    """List all ingested documents with their chunk counts."""
+    try:
+        store = get_vector_store()
+        return store.list_documents()
+    except Exception as exc:
+        logger.error("Failed to list documents", extra={"error": str(exc)})
+        raise HTTPException(status_code=500, detail="Could not retrieve document list.")
 
 
 @router.post("/upload-document", response_model=UploadResponse)

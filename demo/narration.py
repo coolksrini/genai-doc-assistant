@@ -60,7 +60,7 @@ SCENES = [
     """),
 
     ("02_upload_pdf.mp3", """
-        Back on the App tab.
+        Back on the App tab, we open the Documents section.
         We start by uploading the Attention Is All You Need paper —
         the two-thousand-seventeen Transformer architecture paper — as a PDF.
         The system reads each page, splits the text into chunks,
@@ -82,7 +82,7 @@ SCENES = [
     """),
 
     ("05_question.mp3", """
-        We type our first question:
+        We switch to the Ask tab and type our first question:
         What is the attention mechanism in the Transformer?
         The question is now passing through the five-agent pipeline.
         The Planner is checking it for injection patterns.
@@ -132,7 +132,7 @@ SCENES = [
 
     ("10_happiness.mp3", """
         Now we query the World Happiness data.
-        We ask: what happiness score does Finland have in the dataset?
+        We ask: what is Finland's happiness score?
         The Retriever searches the Excel chunks
         and the system returns the answer directly from the spreadsheet row:
         Finland has a happiness score of seven point eight zero four.

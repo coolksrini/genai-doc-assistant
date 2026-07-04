@@ -42,10 +42,10 @@ UPLOADS_PATH  = Path(__file__).parent.parent / "data" / "uploads"
 # Durations from: python demo/narration.py  (rate="-15%", en-US-AndrewNeural)
 SCENE = {
     "intro":         27,   # 00_intro.mp3        = 26.14s + 0.9s
-    "upload_pdf":    27,   # 02_upload_pdf.mp3   = 26.78s + 0.2s
+    "upload_pdf":    31,   # 02_upload_pdf.mp3   = 28.90s + 2s
     "upload_csv":    14,   # 03_upload_csv.mp3   = 13.27s + 0.7s
     "upload_excel":  16,   # 04_upload_excel.mp3 = 15.94s + 0.1s
-    "question":      33,   # 05_question.mp3     = 31.94s + 1.1s
+    "question":      36,   # 05_question.mp3     = 33.74s + 2s
     "answer":        25,   # 06_answer.mp3       = 24.12s + 0.9s
     "sources":       16,   # 07_sources.mp3      = 15.77s + 0.2s
     "agent_trace":   26,   # 08_agent_trace.mp3  = 25.73s + 0.3s
@@ -57,11 +57,10 @@ SCENE = {
 }
 
 # Architecture scroll: two phases so the right content is on screen when narrated.
-# Phase 1 (40s, 400px): slow scroll through the architecture diagram
-# Phase 2 (37s, 300px): slower scroll to settle on the Agent Roles table
-# Total raw: ~79s → compressed to 77.45s (01_architecture.mp3) at 1.02×
-ARCH_PH1_PX = 400;  ARCH_PH1_S = 40
-ARCH_PH2_PX = 300;  ARCH_PH2_S = 37
+# Phase 1 (40s): slow scroll through the architecture diagram
+# Phase 2 (37s): scroll to Agent Roles heading dynamically (avoids overshooting to Configuration)
+ARCH_PH1_PX = 300;  ARCH_PH1_S = 40   # scroll 300px = reaches mid-diagram
+ARCH_PH2_S   = 37                       # hold/scroll duration for agents section
 
 
 # ---------- timing tracking ----------
@@ -195,10 +194,21 @@ async def run_demo():
         await page.wait_for_timeout(1000)
         await screenshot(page, "02_architecture_top")
         mark("arch")
-        # Phase 1: scroll through architecture diagram
+        # Phase 1: slow scroll through the architecture diagram
         await scroll_slowly(page, total_px=ARCH_PH1_PX, duration_s=ARCH_PH1_S)
-        # Phase 2: slower scroll to settle on Agent Roles table
-        await scroll_slowly(page, total_px=ARCH_PH2_PX, duration_s=ARCH_PH2_S)
+        # Phase 2: scroll to Agent Roles heading (dynamic — avoids overshooting to Configuration)
+        agent_roles_scroll_px = await page.evaluate("""
+            () => {
+                for (const h of document.querySelectorAll('h2, h3')) {
+                    if (h.textContent.trim().startsWith('Agent')) {
+                        const target = h.getBoundingClientRect().top + window.scrollY - 60;
+                        return Math.max(0, target - window.scrollY);
+                    }
+                }
+                return 200;
+            }
+        """)
+        await scroll_slowly(page, total_px=int(agent_roles_scroll_px), duration_s=ARCH_PH2_S)
         await screenshot(page, "02_architecture_agents")
         await page.wait_for_timeout(2000)
         mark("arch_end")   # mark here — BEFORE transition to App tab
@@ -207,10 +217,12 @@ async def run_demo():
         # PHASE 2 — LIVE DEMO
         # ============================================================
 
-        # Switch back to App tab for uploads
-        print("\n🎬 [Phase 2] Back to App tab")
+        # Switch back to App tab → Documents sub-tab for uploads
+        print("\n🎬 [Phase 2] Back to App tab → Documents sub-tab")
         await click_tab(page, "App")
         await page.wait_for_timeout(1000)
+        await click_tab(page, "Documents")
+        await page.wait_for_timeout(800)
 
         # Scene: Upload PDF
         print("\n🎬 [Phase 2] Upload PDF")
@@ -233,11 +245,16 @@ async def run_demo():
         mark("excel")
         await wait(page, SCENE["upload_excel"], "narration: upload Excel")
 
+        # Switch to Ask sub-tab — upload section completely hidden
+        print("\n🎬 [Phase 2] Switch to Ask sub-tab")
+        await click_tab(page, "Ask")
+        await page.wait_for_timeout(800)
+        mark("question")   # mark HERE — Ask tab just appeared; clip 05 video starts now
+
         # Scene: Question typed — hold while pipeline runs + narration explains it
         print("\n🎬 [Phase 2] Question: attention mechanism")
         await type_question(page, "What is the attention mechanism in the Transformer?")
         await screenshot(page, "06_question_typed")
-        mark("question")
         await wait(page, SCENE["question"], "narration: question + pipeline running")
 
         # Scene: Grounded answer visible
@@ -277,7 +294,7 @@ async def run_demo():
 
         # Scene: World Happiness
         print("\n🎬 [Phase 2] World Happiness Q&A")
-        await type_question(page, "What happiness score does Finland have in the dataset?")
+        await type_question(page, "What is Finland's happiness score?")
         await page.wait_for_timeout(30000)   # extra time — llama3.2 3B needs it
         await screenshot(page, "11_happiness")
         mark("happiness")
@@ -321,8 +338,8 @@ async def run_demo():
     for k, v in _timings.items():
         print(f"   {k:<14} {v:>7.1f}s")
 
-    # Keep largest webm as demo_raw
-    webm_files = sorted(ASSETS.glob("*.webm"), key=lambda p: p.stat().st_size, reverse=True)
+    # Keep newest webm as demo_raw (largest would keep stale files if old recording is bigger)
+    webm_files = sorted(ASSETS.glob("*.webm"), key=lambda p: p.stat().st_mtime, reverse=True)
     if webm_files:
         raw = ASSETS / "demo_raw.webm"
         if webm_files[0] != raw:
